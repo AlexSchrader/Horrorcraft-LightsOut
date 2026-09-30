@@ -1,0 +1,32 @@
+{
+  "model": "eleven_flash_v2_5",
+  "voices": {
+    "alex": {
+      "voice_id": "qqsQMfAy4f6zbqk9tBNO",
+      "source": "chat",
+      "priority": true
+    },
+    "josh": {
+      "voice_id": "1cuDPO8sIMatoOE4Z2Zv"
+    },
+    "dane": {
+      "voice_id": "q5DSap58ea32P9TmDyTg"
+    },
+    "mara": {
+      "voice_id": "DODLEQrClDo8wCz460ld"
+    },
+    "tyler": {
+      "voice_id": "sNKKDngZymUvjZVKvNU1"
+    },
+    "reyes": {
+      "voice_id": "wToR447ojQ91QCc7UqnX"
+    },
+    "hale": {
+      "voice_id": "a4CnuaYbALRvW39mDitg"
+    },
+    "killer": {
+      "voice_id": null,
+      "silent": true
+    }
+  }
+}
