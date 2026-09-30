@@ -12,7 +12,7 @@ under horror?
 | Skins (8) | `assets/skins/` (alex + josh = slim model) |
 | Sound pack (20) | `assets/resourcepack/lightsout-sounds.zip` |
 | Voices | **done**: `config/voices.json` (7 voices, killer silent) |
-| Paper plugin | not started |
+| Paper plugin | **step 1 built**, unit tests pass; live test pending: `plugin/` |
 | Killer bot | not started |
 | Bridge + director | not started |
 | Agent runtime (mindcraft fork) | not started |

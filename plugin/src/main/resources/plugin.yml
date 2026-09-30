@@ -1,0 +1,14 @@
+name: LightsOut
+version: '${version}'
+main: com.horrorcraft.lightsout.LightsOutPlugin
+api-version: '1.21'
+description: Horrorcraft Lights Out - three-hit rule, proximity chat, wounds, carry, killer stun and visibility.
+commands:
+  lo:
+    description: Lights Out director controls
+    usage: /lo <run|status|arm|disarm|hit|stun|carry|drop|killer>
+    permission: lightsout.admin
+permissions:
+  lightsout.admin:
+    description: Director controls (ops and RCON)
+    default: op

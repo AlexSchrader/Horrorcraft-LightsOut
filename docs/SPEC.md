@@ -146,12 +146,12 @@ Scripted bot, no LLM, no voice. Acts only when the director allows; walks away f
 | --- | --- | --- | --- |
 | DORMANT | No | Parked far from campers | SIGN when tension rises |
 | SIGN | No | Director creates a sign near a target | STALK or DORMANT |
-| STALK | No (invisibility) | Follows at 12-20 blocks, stops when target stops | REVEAL or DORMANT |
+| STALK | No (hidden per player) | Follows at 12-20 blocks, stops when target stops | REVEAL or DORMANT |
 | REVEAL | Yes | Visible at treeline or doorway for a few seconds | STRIKE or VANISH |
 | STRIKE | Yes | Attacks, only with director permission | DORMANT |
 | VANISH | No | Teleports out of sight | DORMANT |
 
-Rules: invulnerable (can be stunned, never hurt); never strikes on a camper's first encounter; most reveals end in VANISH; first reveal is always distant, at the treeline, at night; excluded from the sleep count; original masked skin.
+Rules: invulnerable (can be stunned, never hurt); never strikes on a camper's first encounter; most reveals end in VANISH; first reveal is always distant, at the treeline, at night; excluded from the sleep count; original masked skin. Hidden with per-player hidePlayer, never the invisibility effect (it still renders the held axe and armor); hidden also drops him from the tab list and bot perception. Default hidden from campers and Alex.
 
 ### Killer weaknesses
 
@@ -213,6 +213,8 @@ Every camper has 3 lives; each landed killer hit removes one. The plugin tracks 
 | 2/3 | ~6.5 | Slowness I | You're hurt |
 | 1/3 | ~3 | Slowness II, no sprint, blood trail | You're badly hurt, can barely walk |
 | 0/3 | — | Dead, body placed | — |
+
+Plugin enforcement: every non-killer damage to campers is cancelled except void. A killer hit only counts while the director has armed him (`/lo arm <target> <hits>`), up to the armed count; unarmed swings do nothing. Alex is armed the same way when a roll targets him. The stun roll (any hit on the killer) uses a generator derived from the run seed; every roll is logged with its index.
 
 ## Survival actions
 
@@ -314,6 +316,14 @@ Invulnerable, never targeted, no memory.
 | Trailhead | 83 88 283 | Spawn, police spawn, extraction |
 | Village | 32 ~ 368 | Campsite, ~99 blocks SW of trailhead |
 | Mansion | 168 ~ 408 | Radio, killer's room, finale; ~151 SE of trailhead, ~142 E of village |
+
+| Mansion spot | Coords | Note |
+| --- | --- | --- |
+| Radio chest | 161 104 375 (verified) | ~75 blocks from killer spawn; starts empty |
+| Den trophy chest | 228 115 415 (verified) | Dead campers' items moved here |
+| Killer spawn | 228 115 411 | DORMANT home; killer_room_exit plays when he leaves |
+| Den entrance door | 224 115 398 | Hidden door, hallway to the den |
+| Mara's closet | 220 115 406 | Killer's route should pass her door |
 
 | Sign | Text |
 | --- | --- |
@@ -418,7 +428,7 @@ gamerule playersSleepingPercentage 0
 gamerule doImmediateRespawn true
 ```
 
-Peaceful is not used: it regenerates health. Food in chests and starter bread in inventories.
+Easy with spawn-monsters=false in server.properties (no monsters, no auto-heal). Hunger drains: food in chests and starter bread in inventories. Plugin still cancels health regain for campers and blocks sprint at 1/3 as a safety net.
 
 ## Failsafes
 
