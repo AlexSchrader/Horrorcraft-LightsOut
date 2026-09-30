@@ -19,7 +19,16 @@ class RosterTest {
                 Roster.parse("Tyler", "tyler", "camper"),
                 Roster.parse("Reyes", "reyes", "police"),
                 Roster.parse("Hale", "hale", "police"),
-                Roster.parse("Hollow", "killer", "killer")));
+                Roster.parse("Hollow", "killer", "killer"),
+                Roster.parse("CamJosh", "camjosh", "camera")));
+    }
+
+    @Test
+    void camerasHaveNoLives() {
+        Actor cam = cast().byUsername("camjosh");
+        assertTrue(cam.isCamera());
+        assertFalse(cam.hasLives());
+        assertFalse(cast().livesIds().contains("camjosh"));
     }
 
     @Test

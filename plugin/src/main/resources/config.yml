@@ -26,7 +26,19 @@ blood:
   drip-ticks: 10
   trail-seconds: 60
 
-# Minecraft username -> actor id and role (camper, human, killer, police).
+# Camera accounts (role camera): shot timing for the auto director and fixed cameras.
+cameras:
+  director-seconds: 2
+  relock-seconds: 5
+  min-shot-seconds: 8
+  rotate-seconds: 60
+  near-radius: 60
+  chase-radius: 20
+  body-hold-seconds: 10
+  cue-seconds: 20
+
+# Minecraft username -> actor id and role (camper, human, killer, police, camera).
+# Cameras also get follow: auto, or the username they follow.
 actors:
   ACSsnipertroll: {id: alex, role: human}
   Josh: {id: josh, role: camper}
@@ -36,3 +48,9 @@ actors:
   Reyes: {id: reyes, role: police}
   Hale: {id: hale, role: police}
   Hollow: {id: killer, role: killer}
+  Camera: {id: camera, role: camera, follow: auto}
+  KillerCam: {id: killercam, role: camera, follow: Hollow}
+  CamJosh: {id: camjosh, role: camera, follow: Josh}
+  CamDane: {id: camdane, role: camera, follow: Dane}
+  CamMara: {id: cammara, role: camera, follow: Mara}
+  CamTyler: {id: camtyler, role: camera, follow: Tyler}

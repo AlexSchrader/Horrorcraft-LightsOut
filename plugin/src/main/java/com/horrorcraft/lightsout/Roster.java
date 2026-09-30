@@ -10,12 +10,16 @@ import java.util.Map;
 /** Who is who: Minecraft username (case-insensitive) to actor id and role. */
 public final class Roster {
 
-    public enum Role { CAMPER, HUMAN, KILLER, POLICE }
+    public enum Role { CAMPER, HUMAN, KILLER, POLICE, CAMERA }
 
     public record Actor(String username, String id, Role role) {
         /** Campers and Alex: the ones with lives. */
         public boolean hasLives() {
             return role == Role.CAMPER || role == Role.HUMAN;
+        }
+
+        public boolean isCamera() {
+            return role == Role.CAMERA;
         }
     }
 

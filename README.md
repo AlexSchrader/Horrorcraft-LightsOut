@@ -12,7 +12,7 @@ under horror?
 | Skins (8) | `assets/skins/` (alex + josh = slim model) |
 | Sound pack (20) | `assets/resourcepack/lightsout-sounds.zip` |
 | Voices | **done**: `config/voices.json` (7 voices, killer silent) |
-| Paper plugin | **step 1 built**, unit tests pass; live test pending: `plugin/` |
+| Paper plugin | **steps 1 + 1b done**, unit + live tests pass: `plugin/` |
 | Killer bot | not started |
 | Bridge + director | not started |
 | Agent runtime (mindcraft fork) | not started |
@@ -22,7 +22,7 @@ under horror?
 
 - Paper **1.21.6**, own folder `C:\dev\lightsout-server` (never share with Polis)
 - Seed `-1541124385142397106`
-- Trailhead `83 88 283` · Village `32 ~ 368` · Mansion `168 ~ 408`
+- Trailhead `83 89 283` · Village `32 ~ 368` · Mansion `168 ~ 408`
 
 ## Setup
 

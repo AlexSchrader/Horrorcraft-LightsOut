@@ -19,6 +19,7 @@ the source of truth; if code and spec disagree, stop and flag it.
    slowness tiers, no natural regen), proximity chat (~24 blocks, forward Alex's
    lines to the bridge, `*` = text-only), wounded effects + blood particles,
    carry (addPassenger), stun on hitting the killer.
+1b. **Camera accounts** (`plugin/`): six spectator cameras, director auto-cut. See Cameras in the spec.
 2. **Death hook + bodies**: no respawn for dead campers, armor stand body,
    `bodies` row.
 3. **Proximity messages**: sign text, body discovery, sound-as-text for agents.
@@ -31,3 +32,11 @@ the source of truth; if code and spec disagree, stop and flag it.
    stale lines dropped live but archived, volume by distance.
 7. **Radio, police, backup, endings.**
 8. **Watcher**: reads `watch_*` views only.
+
+## Notes for later steps
+
+- Trailhead standing height is y=89. Use `83 89 283` for spawn, police spawn and extraction (y=88 is the grass block).
+- Node 24 for everything in this repo (`.nvmrc`). Every package.json has `"engines": {"node": ">=22"}` (mineflayer 4.39.0 requires it).
+- The agent runtime reads chat from `msg.unsigned` (the server-edited text), not the raw text, so agents never see the `*` marker.
+- Resource-pack errors on bot join (`Unexpected request for task finish ... server_resource_pack`) are expected and harmless.
+- Camera accounts replace prismarine-viewer; do not enable `render_bot_view` in the mindcraft fork.

@@ -3,70 +3,15 @@
 // what the server reports and what lands in the outbox. Needs Node >= 22.
 const fs = require('fs');
 const path = require('path');
-const mineflayer = require('mineflayer');
-const { Rcon } = require('./rcon');
+const { harness, sleep, dist, SERVER, SEED, STATE, SPOT } = require('./lib');
 
-const SERVER = 'C:/dev/lightsout-server';
-const HOST = '127.0.0.1';
-const SEED = '-1541124385142397106';
-const RUN = 'livetest-' + new Date().toISOString().replace(/[:.]/g, '-');
-const OUTBOX = path.join(SERVER, 'plugins/LightsOut/outbox', RUN + '.jsonl');
-const STATE = path.join(SERVER, 'plugins/LightsOut/state.json');
-const SPOT = { x: 83.5, y: 89, z: 283.5 }; // trailhead, standing height (88 is the grass block)
-
-const props = Object.fromEntries(fs.readFileSync(path.join(SERVER, 'server.properties'), 'utf8')
-  .split(/\r?\n/).filter(l => l.includes('=') && !l.startsWith('#'))
-  .map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const results = [];
-function check(name, ok, detail = '') {
-  results.push({ name, ok: !!ok, detail });
-  console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  (' + detail + ')' : ''}`);
-}
-
-function outbox(kind) {
-  try {
-    return fs.readFileSync(OUTBOX, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
-      .filter(e => !kind || e.kind === kind);
-  } catch { return []; }
-}
-const last = kind => outbox(kind).at(-1);
-
-let rcon;
-const cmd = c => rcon.cmd(c);
-
-async function lives(id) {
-  const s = await cmd('lo status');
-  const m = s.match(new RegExp(`\\b${id}=(\\d)`));
-  return m ? +m[1] : null;
-}
-
-async function pos(name) {
-  const s = await cmd(`data get entity ${name} Pos`);
-  const n = [...s.matchAll(/(-?\d+(?:\.\d+)?)d/g)].map(m => +m[1]);
-  return n.length === 3 ? { x: n[0], y: n[1], z: n[2] } : null;
-}
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+const h = harness('livetest');
+const { RUN, check, outbox, last, lives, pos, spawnBot } = h;
+const cmd = h.cmd;
 
 async function mounted(rider, carrier) {
   const s = await cmd(`execute as ${rider} on vehicle if entity @s[name=${carrier}]`);
   return /passed/i.test(s);
-}
-
-function spawnBot(username) {
-  return new Promise((resolve, reject) => {
-    const bot = mineflayer.createBot({ host: HOST, port: +props['server-port'], username, auth: 'offline', version: '1.21.6' });
-    bot.on('resourcePack', () => bot.acceptResourcePack());
-    bot.heard = [];
-    // What a vanilla client displays: the server-edited (unsigned) text when there is one.
-    bot.on('message', (msg, pos) => { if (pos === 'chat') bot.heard.push((msg.unsigned ?? msg).toString()); });
-    bot.dust = 0;
-    bot.on('particle', p => { if (p.id === bot.registry.particlesByName.dust?.id) bot.dust++; });
-    bot.once('spawn', () => resolve(bot));
-    bot.once('kicked', r => reject(new Error(`${username} kicked: ${JSON.stringify(r)}`)));
-    bot.once('error', reject);
-  });
 }
 
 function slowness(bot) {
@@ -83,7 +28,7 @@ function attack(attacker, targetName) {
 }
 
 async function main() {
-  rcon = await new Rcon(HOST, +props['rcon.port'], props['rcon.password']).connect();
+  await h.connect();
   console.log('run', RUN);
   console.log(await cmd('list'));
   const r = await cmd(`lo run ${RUN} ${SEED}`);
@@ -283,15 +228,7 @@ async function main() {
     && st.lives.dane === 3 && st.stun_index === rolls.length, JSON.stringify({ run: st.run_id, lives: st.lives, idx: st.stun_index }));
   check('no state.json.tmp left behind', !fs.existsSync(STATE + '.tmp'));
 
-  console.log('\n' + (await cmd('lo status')).trim());
-  for (const b of bots) b.quit();
-  await sleep(500);
-  rcon.close();
-
-  const failed = results.filter(x => !x.ok);
-  console.log(`\n${results.length - failed.length}/${results.length} passed`);
-  console.log('outbox: ' + OUTBOX);
-  process.exit(failed.length ? 1 : 0);
+  await h.finish();
 }
 
 main().catch(e => { console.error('ABORTED:', e); process.exit(2); });

@@ -17,12 +17,15 @@ import java.util.UUID;
 public final class LoCommand implements TabExecutor {
 
     private static final List<String> SUBS =
-            List.of("run", "status", "arm", "disarm", "hit", "stun", "carry", "drop", "killer");
+            List.of("run", "status", "arm", "disarm", "hit", "stun", "carry", "drop", "killer", "cam", "cue");
+    private static final List<String> CUES = List.of("reveal", "chase", "discovery");
 
     private final Game game;
+    private final Cameras cameras;
 
-    public LoCommand(Game game) {
+    public LoCommand(Game game, Cameras cameras) {
         this.game = game;
+        this.cameras = cameras;
     }
 
     @Override
@@ -46,6 +49,8 @@ public final class LoCommand implements TabExecutor {
                 case "carry" -> carry(s, a);
                 case "drop" -> drop(s, a);
                 case "killer" -> killer(s, a);
+                case "cam" -> cam(s, a);
+                case "cue" -> cue(s, a);
                 default -> usage(s);
             }
         } catch (RuntimeException e) {
@@ -56,7 +61,8 @@ public final class LoCommand implements TabExecutor {
 
     private boolean usage(CommandSender s) {
         s.sendMessage("usage: /lo run <run_id> <seed> | status | arm <target> <1-3> | disarm | hit <camper> | "
-                + "stun | carry <carrier> <rider> | drop <rider> | killer <hide|show>");
+                + "stun | carry <carrier> <rider> | drop <rider> | killer <hide|show> | "
+                + "cam <account> <target|auto|free> | cam status | cue <reveal|chase|discovery> <camper>");
         return true;
     }
 
@@ -146,6 +152,36 @@ public final class LoCommand implements TabExecutor {
         s.sendMessage("ok killer " + (hide ? "hidden" : "shown"));
     }
 
+    private void cam(CommandSender s, String[] a) {
+        if (a.length == 2 && a[1].equalsIgnoreCase("status")) {
+            for (String line : cameras.status()) s.sendMessage(line);
+            return;
+        }
+        if (a.length != 3) { s.sendMessage("usage: /lo cam <account> <target|auto|free> | /lo cam status"); return; }
+        Cameras.Rig r = cameras.rig(a[1]);
+        if (r == null) { s.sendMessage("error unknown camera " + a[1]); return; }
+        String err = cameras.setMode(r, a[2]);
+        if (err != null) { s.sendMessage("error " + err); return; }
+        cameras.directorSet(r);
+        s.sendMessage("ok " + a[1] + " " + a[2].toLowerCase());
+    }
+
+    private void cue(CommandSender s, String[] a) {
+        if (a.length != 3 || !CUES.contains(a[1].toLowerCase())) {
+            s.sendMessage("usage: /lo cue <reveal|chase|discovery> <camper>");
+            return;
+        }
+        Actor t = livesActor(a[2]);
+        if (t == null) { s.sendMessage("error unknown camper " + a[2]); return; }
+        String kind = a[1].toLowerCase();
+        cameras.cue(kind, t.id());
+        Map<String, Object> f = new LinkedHashMap<>();
+        f.put("cue", kind);
+        f.put("target", t.id());
+        game.outbox().emit("cue", f);
+        s.sendMessage("ok cue " + kind + " " + t.id());
+    }
+
     /** Accepts an actor id (josh) or a username (Josh, ACSsnipertroll). */
     private Actor livesActor(String name) {
         Actor t = game.roster().byId(name);
@@ -164,6 +200,18 @@ public final class LoCommand implements TabExecutor {
         if (a.length == 1) return filter(SUBS, a[0]);
         String sub = a[0].toLowerCase();
         if (a.length == 2 && sub.equals("killer")) return filter(List.of("hide", "show"), a[1]);
+        if (a.length == 2 && sub.equals("cue")) return filter(CUES, a[1]);
+        if (a.length == 2 && sub.equals("cam")) {
+            List<String> ids = new ArrayList<>(List.of("status"));
+            ids.addAll(cameras.rigs().keySet());
+            return filter(ids, a[1]);
+        }
+        if (a.length == 3 && (sub.equals("cam") || sub.equals("cue"))) {
+            List<String> ids = new ArrayList<>();
+            if (sub.equals("cam")) ids.addAll(List.of("auto", "free"));
+            for (Actor x : game.roster().all()) if (x.hasLives() || (sub.equals("cam") && !x.isCamera())) ids.add(x.id());
+            return filter(ids, a[2]);
+        }
         if ((a.length == 2 && List.of("arm", "hit", "carry", "drop").contains(sub)) || (a.length == 3 && sub.equals("carry"))) {
             List<String> ids = new ArrayList<>();
             for (Actor x : game.roster().all()) ids.add(x.id());

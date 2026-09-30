@@ -319,7 +319,7 @@ public final class Game {
         outbox.emit("killer_visibility", f);
     }
 
-    /** Campers and Alex see the killer only when shown. Police and others always see him. */
+    /** Campers and Alex see the killer only when shown. Cameras, police and others always see him. */
     public void applyKillerVisibility(Player viewer) {
         Player k = killer();
         if (k == null || viewer.equals(k)) return;

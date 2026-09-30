@@ -313,7 +313,7 @@ Invulnerable, never targeted, no memory.
 
 | Place | Coords | Use |
 | --- | --- | --- |
-| Trailhead | 83 88 283 | Spawn, police spawn, extraction |
+| Trailhead | 83 89 283 | Spawn, police spawn, extraction (standing height; y=88 is the grass block) |
 | Village | 32 ~ 368 | Campsite, ~99 blocks SW of trailhead |
 | Mansion | 168 ~ 408 | Radio, killer's room, finale; ~151 SE of trailhead, ~142 E of village |
 
@@ -378,12 +378,48 @@ Agents can't read signs: the bridge sends sign text when a camper is within 5 bl
 
 ## Cameras
 
+Six spectator camera accounts replace prismarine-viewer for both footage and live monitoring. The mindcraft fork runs without render_bot_view.
+
 | Use | Tool |
 | --- | --- |
-| Live monitor | prismarine-viewer per agent (render_bot_view), OBS grid; ignores darkness |
+| Live monitor | Camera accounts, one client each, OBS grid |
 | Alex POV | OBS on his client |
 | Movie shots | Replay Mod on Alex's client (only within his render distance) |
 | After Alex dies | /spectate survivors |
+
+| Account | Follows |
+| --- | --- |
+| Camera | auto (director camera) |
+| KillerCam | Hollow |
+| CamJosh / CamDane / CamMara / CamTyler | Josh / Dane / Mara / Tyler |
+
+Every camera account:
+
+- Forced spectator on join. No lives, no damage, no proximity chat in or out.
+- No potion effects from the plugin (no Night Vision); brightness is set in each camera client.
+- Hidden from every non-camera player and bot (hidePlayer): never in the tab list or bot perception.
+- Never hidden from the killer: `/lo killer hide` exempts camera accounts.
+- On join and every 5 s, re-locks onto its target if it is not spectating it (after deaths, teleports, reconnects).
+- Target dead or offline: holds 10 s on the body (or last known spot), then follows the killer. Returns to the target if it comes back.
+
+Director camera (auto), checked every 2 s, highest priority wins:
+
+| # | Situation | Shot |
+| --- | --- | --- |
+| 1 | Chase active, then killer revealed | The chased camper, then the revealed camper |
+| 2 | Body discovered in the last 20 s | The finder |
+| 3 | A living camper within 60 blocks of the killer | The closest one |
+| 4 | Nothing within 60 blocks of the killer | Rotate living campers every 60 s |
+
+Each shot lasts at least 8 s (no jitter); a subject's death cuts to a 10 s body hold. Every cut is a `cam` outbox event.
+
+| Cue | Plugin detects | Director override |
+| --- | --- | --- |
+| Reveal | `/lo killer show`: living camper closest to the killer (within 60) | `/lo cue reveal <camper>` |
+| Chase | Killer armed and within 20 blocks of the target | `/lo cue chase <camper>` |
+| Discovery | — (bridge calls it from step 3) | `/lo cue discovery <finder>` |
+
+Director cues last 20 s. Overrides: `/lo cam <account> <target|auto|free>`, `/lo cam status`.
 
 ## Voice and proximity
 

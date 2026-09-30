@@ -34,10 +34,12 @@ public final class GameListener implements Listener {
 
     private final LightsOutPlugin plugin;
     private final Game game;
+    private final Cameras cameras;
 
-    public GameListener(LightsOutPlugin plugin, Game game) {
+    public GameListener(LightsOutPlugin plugin, Game game, Cameras cameras) {
         this.plugin = plugin;
         this.game = game;
+        this.cameras = cameras;
     }
 
     // ---------- three-hit rule ----------
@@ -47,6 +49,10 @@ public final class GameListener implements Listener {
         if (!(e.getEntity() instanceof Player victim)) return;
         Actor va = game.actor(victim);
         if (va == null) return;
+        if (va.isCamera()) {
+            e.setCancelled(true); // cameras never take damage, void included
+            return;
+        }
         if (game.takeLethal(victim)) return; // the plugin's own killing blow
         if (e.getCause() == EntityDamageEvent.DamageCause.VOID) return; // void stays lethal
         e.setCancelled(true); // campers, killer and police never take real damage
@@ -94,6 +100,7 @@ public final class GameListener implements Listener {
         Player p = e.getPlayer();
         EntityDamageEvent last = p.getLastDamageCause();
         game.onDeath(p, last == null ? "unknown" : last.getCause().name().toLowerCase());
+        cameras.onGone(p);
     }
 
     @EventHandler
@@ -124,11 +131,13 @@ public final class GameListener implements Listener {
         } else {
             game.applyKillerVisibility(p);
         }
+        cameras.onJoin(p);
         Bukkit.getScheduler().runTask(plugin, () -> game.applyTier(p));
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
+        cameras.onGone(e.getPlayer());
         game.dropInvolving(e.getPlayer().getUniqueId(), "quit");
         game.forget(e.getPlayer());
     }
@@ -148,6 +157,10 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onChat(AsyncChatEvent e) {
         Player speaker = e.getPlayer();
+        if (cameras.isCamera(speaker)) {
+            e.setCancelled(true); // cameras never talk
+            return;
+        }
         Proximity.Pos from = game.positions().get(speaker.getUniqueId());
         String raw = PlainTextComponentSerializer.plainText().serialize(e.message());
         Proximity.Line line = Proximity.parse(raw);
@@ -157,6 +170,7 @@ public final class GameListener implements Listener {
         e.viewers().removeIf(aud -> {
             if (!(aud instanceof Player listener)) return false; // console keeps everything
             if (listener.equals(speaker)) return false;
+            if (cameras.isCamera(listener)) return true; // cameras never hear
             boolean hears = Proximity.hears(from, game.positions().get(listener.getUniqueId()), game.chatRadius());
             if (hears) heardBy.add(game.idOf(listener));
             return !hears;
