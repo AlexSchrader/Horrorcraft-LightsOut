@@ -47,6 +47,7 @@ public final class GameListener implements Listener {
         if (!(e.getEntity() instanceof Player victim)) return;
         Actor va = game.actor(victim);
         if (va == null) return;
+        if (game.takeLethal(victim)) return; // the plugin's own killing blow
         if (e.getCause() == EntityDamageEvent.DamageCause.VOID) return; // void stays lethal
         e.setCancelled(true); // campers, killer and police never take real damage
 

@@ -19,9 +19,11 @@ import org.bukkit.util.Vector;
 
 import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -52,6 +54,9 @@ public final class Game {
     private final Map<UUID, UUID> carries = new HashMap<>(); // rider -> carrier
     private final ArrayDeque<Drip> drips = new ArrayDeque<>();
     private final Map<UUID, Proximity.Pos> positions = new ConcurrentHashMap<>();
+    private final Set<UUID> lethal = new HashSet<>();         // our own killing blow, let through once
+    private final Map<UUID, String> deathCause = new HashMap<>();
+    private final Set<String> deathLogged = new HashSet<>();  // one death per camper per run
 
     public Game(LightsOutPlugin plugin, Roster roster, Lives lives, long hitSpacingMs, double chatRadius,
                 double stunChance, long stunMs, long trailMs, Outbox outbox, StateStore store, StateStore.State state) {
@@ -112,13 +117,14 @@ public final class Game {
         killerStunnedUntil = 0;
         for (UUID rider : new java.util.ArrayList<>(carries.keySet())) drop(rider, "run_start");
         drips.clear();
+        deathLogged.clear();
         outbox.setRun(runId);
         save();
         Map<String, Object> f = new LinkedHashMap<>();
         f.put("seed", Long.toString(seed));
         f.put("lives", lives.snapshot());
         outbox.emit("run_start", f);
-        for (Player p : Bukkit.getOnlinePlayers()) applyTier(p);
+        for (Player p : Bukkit.getOnlinePlayers()) applyTier(p, true);
     }
 
     public void save() {
@@ -130,8 +136,12 @@ public final class Game {
 
     // ---------- lives and wounds ----------
 
-    /** Makes health and effects match lives. Never raises lives; health follows lives. */
+    /** Makes health and effects match lives. Health is only ever lowered, except by a new run. */
     public void applyTier(Player p) {
+        applyTier(p, false);
+    }
+
+    private void applyTier(Player p, boolean newRun) {
         Actor a = actor(p);
         if (a == null || !a.hasLives() || p.isDead()) return;
         int n = lives.get(a.id());
@@ -142,7 +152,7 @@ public final class Game {
         AttributeInstance attr = p.getAttribute(Attribute.MAX_HEALTH);
         if (attr != null) max = attr.getValue();
         double hp = Math.min(t.health(), max);
-        if (Math.abs(p.getHealth() - hp) > 0.01) p.setHealth(hp);
+        if (p.getHealth() > hp + 0.01 || (newRun && Math.abs(p.getHealth() - hp) > 0.01)) p.setHealth(hp);
 
         PotionEffect cur = p.getPotionEffect(PotionEffectType.SLOWNESS);
         if (t.slownessAmplifier() < 0) {
@@ -205,10 +215,37 @@ public final class Game {
 
         if (after <= 0) {
             dropInvolving(victim.getUniqueId(), "died");
-            victim.setHealth(0);
+            // Next tick: killing inside the attack's own damage event ran the death twice.
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (victim.isOnline() && !victim.isDead()) kill(victim, source);
+            });
         } else {
             applyTier(victim);
         }
+    }
+
+    /**
+     * Kills through the normal damage path with no damager, so the death message never names
+     * the killer. Never call from inside a damage event (see landHit).
+     */
+    private void kill(Player victim, String cause) {
+        UUID id = victim.getUniqueId();
+        deathCause.put(id, cause);
+        lethal.add(id);
+        try {
+            victim.damage(1000.0);
+        } finally {
+            lethal.remove(id);
+        }
+        if (!victim.isDead()) {
+            plugin.getLogger().warning(victim.getName() + " survived the lethal hit; forcing death");
+            victim.setHealth(0);
+        }
+    }
+
+    /** True once for our own killing blow, so the damage listener lets it through. */
+    public boolean takeLethal(Player p) {
+        return lethal.remove(p.getUniqueId());
     }
 
     /** Called from the death event for any camper death (killer hit or void). */
@@ -216,7 +253,9 @@ public final class Game {
         Actor a = actor(p);
         if (a == null) return;
         dropInvolving(p.getUniqueId(), "died");
-        if (!a.hasLives()) return;
+        String ours = deathCause.remove(p.getUniqueId());
+        if (ours != null) cause = ours;
+        if (!a.hasLives() || !deathLogged.add(a.id())) return;
         if (lives.get(a.id()) > 0) {
             lives.kill(a.id());
             save();

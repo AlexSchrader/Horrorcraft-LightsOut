@@ -1,0 +1,9 @@
+{
+  "name": "lightsout-plugin-livetest",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "description": "Two-bot live test for the LightsOut plugin against the running server.",
+  "scripts": { "test": "node livetest.js" },
+  "dependencies": { "mineflayer": "4.39.0" },
+  "overrides": { "mineflayer": "4.39.0" }
+}
